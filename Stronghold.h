@@ -1,338 +1,335 @@
+#define _CRT_SECURE_NO_WARNINGS
 #ifndef STRONGHOLD_H
 #define STRONGHOLD_H
-#define _CRT_SECURE_NO_WARNINGS
-
+#include <iostream>
 #include <fstream>
 #include <ctime>
 #include <cstdlib>
-#include<string>
+#include <cstring>
 
-class Resource;
-class Population;
-class Economy;
-class Military;
-class Government;
-class Bank;
-class Kingdom;
-class Event;
+using namespace std;
 
-class StrongholdException {
-private:
-    char* message;
-public:
-    StrongholdException(const char* msg);
-    ~StrongholdException();
-    const char* getMessage() const;
+// Constants
+const int MAX_KINGDOMS = 5;
+const int MAX_MESSAGES = 20;
+const int MAX_TREATIES = 10;
+const int MAX_TRADE_OFFERS = 15;
+const int MAP_SIZE = 10;
+const int MAX_NAME_LENGTH = 50;
+const int MAX_MESSAGE_LENGTH = 200;
+
+// Enums
+enum ResourceType {
+    GOLD,
+    FOOD,
+    WOOD,
+    STONE
 };
 
-class Resource {
-private:
-    char name[20];
-    int amount;
-    int productionRate;
-    int consumptionRate;
-    float price;
-public:
-    Resource();
-    Resource(const char* name, int amount, int productionRate, int consumptionRate, float price);
-    ~Resource();
-
-    void setName(const char* name);
-    void setAmount(int amount);
-    void setProductionRate(int rate);
-    void setConsumptionRate(int rate);
-    void setPrice(float price);
-
-    const char* getName() const;
-    int getAmount() const;
-    int getProductionRate() const;
-    int getConsumptionRate() const;
-    float getPrice() const;
-
-    void produce();
-    void consume();
-    bool isDepletingSoon() const;
+enum TreatyType {
+    PEACE,
+    ALLIANCE,
+    TRADE,
+    NON_AGGRESSION
 };
 
-enum SocialClass { PEASANT, MERCHANT, NOBLE, CLERGY, MILITARY };
-
-class Person {
-private:
-    SocialClass socialClass;
-    bool isAlive;
-    int happiness;
-    int health;
-    int age;
-public:
-    Person();
-    Person(SocialClass socialClass);
-    ~Person();
-
-    void setSocialClass(SocialClass socialClass);
-    void setAlive(bool alive);
-    void setHappiness(int happiness);
-    void setHealth(int health);
-    void setAge(int age);
-
-    SocialClass getSocialClass() const;
-    bool getAlive() const;
-    int getHappiness() const;
-    int getHealth() const;
-    int getAge() const;
-
-    void update(bool hasFood, bool hasShelter);
-    const char* getSocialClassName() const;
+enum RelationshipStatus {
+    FRIENDLY,
+    NEUTRAL,
+    HOSTILE,
+    WAR
 };
 
-class Population {
-private:
-    Person* people;
-    int capacity;
-    int count;
-    int* socialClassCounts;
-public:
-    Population(int initialCapacity = 100);
-    ~Population();
+// Structures
+struct Resource {
+    int gold;
+    int food;
+    int wood;
+    int stone;
 
-    void addPerson(SocialClass socialClass);
-    void removePerson(int index);
-    int getTotal() const;
-    int getCountByClass(SocialClass socialClass) const;
-    float getHappinessLevel() const;
-    float getHealthLevel() const;
-    bool isRevoltLikely() const;
-    void update(bool hasFood, bool hasShelter);
-
-    void naturalGrowth(float growthRate);
-    void handleFamine(float severityRate);
-    void handleDisease(float severityRate);
-    Person* getPopulation();
+    Resource() : gold(0), food(0), wood(0), stone(0) {}
+    Resource(int g, int f, int w, int s) : gold(g), food(f), wood(w), stone(s) {}
 };
 
+struct Message {
+    char sender[MAX_NAME_LENGTH];
+    char receiver[MAX_NAME_LENGTH];
+    char content[MAX_MESSAGE_LENGTH];
+    bool read;
+
+    Message() {
+        strcpy(sender, "");
+        strcpy(receiver, "");
+        strcpy(content, "");
+        read = false;
+    }
+};
+
+struct Treaty {
+    char kingdom1[MAX_NAME_LENGTH];
+    char kingdom2[MAX_NAME_LENGTH];
+    TreatyType type;
+    int turnEstablished;
+    int duration;
+    bool active;
+
+    Treaty() {
+        strcpy(kingdom1, "");
+        strcpy(kingdom2, "");
+        type = PEACE;
+        turnEstablished = 0;
+        duration = 0;
+        active = false;
+    }
+};
+
+struct offer {
+    char offerer[MAX_NAME_LENGTH];
+    char receiver[MAX_NAME_LENGTH];
+    Resource offering;
+    Resource requesting;
+    bool isSmuggling;
+    bool accepted;
+
+    offer() {
+        strcpy(offerer, "");
+        strcpy(receiver, "");
+        isSmuggling = false;
+        accepted = false;
+    }
+};
+
+// Classes
 class Military {
 private:
     int soldiers;
-    int training;
-    int morale;
-    bool isPaid;
-    Resource* weapons;
-    Resource* food;
+    int archers;
+    int cavalry;
+    int siegeUnits;
+
 public:
     Military();
-    ~Military();
 
-    void setSoldiers(int count);
-    void setTraining(int level);
-    void setMorale(int level);
-    void setPaid(bool paid);
+    void addSoldiers(int count);
+    void addArchers(int count);
+    void addCavalry(int count);
+    void addSiegeUnits(int count);
 
     int getSoldiers() const;
-    int getTraining() const;
-    int getMorale() const;
-    bool getIsPaid() const;
+    int getArchers() const;
+    int getCavalry() const;
+    int getSiegeUnits() const;
 
-    void recruit(Population& population, int count);
-    void feed(Resource& food);
-    void pay(Economy& economy);
-    bool battle(int enemyStrength);
-    int getStrength() const;
-    void update();
-};
-class Economy {
-private:
-    float treasury;
-    float taxRate;
-    float inflationRate;
-public:
-    Economy();
-    ~Economy();
+    int calculateDefensePower() const;
+    int calculateAttackPower() const;
 
-    void setTreasury(float amount);
-    void setTaxRate(float rate);
-    void setInflationRate(float rate);
+    void trainUnits(ResourceType resourceType, int amount);
+    void takeCasualties(int amount);
 
-    float getTreasury() const;
-    float getTaxRate() const;
-    float getInflationRate() const;
+    void saveToFile(ofstream& outFile);
+    void loadFromFile(ifstream& inFile);
 
-    void collectTaxes(Population& population);
-    bool payExpense(float amount);
-    void adjustInflation(float marketStability);
-    void update();
+    void display() const;
 };
 
-enum LeadershipType { MONARCHY, DEMOCRACY, DICTATORSHIP, OLIGARCHY };
-
-class Government {
+class Technology {
 private:
-    LeadershipType leadershipType;
-    char leaderName[50];
-    int leaderCompetence;
-    int leaderCorruption;
-    int termYears;
+    bool advanceAgriculture;
+    bool advanceMilitary;
+    bool advanceConstruction;
+    bool advanceEconomy;
+    int researchPoints;
+
 public:
-    Government();
-    ~Government();
+    Technology();
 
-    void setLeadershipType(LeadershipType type);
-    void setLeaderName(const char* name);
-    void setLeaderCompetence(int level);
-    void setLeaderCorruption(int level);
-    void setTermYears(int years);
+    void addResearchPoints(int points);
+    bool researchTechnology(ResourceType type);
 
-    LeadershipType getLeadershipType() const;
-    const char* getLeaderName() const;
-    int getLeaderCompetence() const;
-    int getLeaderCorruption() const;
-    int getTermYears() const;
+    bool isAgricultureAdvanced() const;
+    bool isMilitaryAdvanced() const;
+    bool isConstructionAdvanced() const;
+    bool isEconomyAdvanced() const;
 
-    void holdElection(Population& population);
-    bool attemptCoup(Military& military, Population& population);
-    float getDecisionQuality() const;
-    void update();
+    void saveToFile(ofstream& outFile);
+    void loadFromFile(ifstream& inFile);
+
+    void display() const;
 };
 
-class Bank {
+class Building {
 private:
-    float reserves;
-    float interestRate;
-    float* loans;
-    int loanCount;
-    int loanCapacity;
-    bool isCorrupt;
+    char name[MAX_NAME_LENGTH];
+    int level;
+    ResourceType resourceBoost;
+    int boostAmount;
+
 public:
-    Bank();
-    ~Bank();
+    Building();
+    Building(const char* buildingName, ResourceType resourceType, int boost);
 
-    void setReserves(float amount);
-    void setInterestRate(float rate);
-    void setCorrupt(bool corrupt);
+    const char* getName() const;
+    int getLevel() const;
+    ResourceType getResourceBoost() const;
+    int getBoostAmount() const;
 
-    float getReserves() const;
-    float getInterestRate() const;
-    bool getIsCorrupt() const;
+    void upgrade();
 
-    bool takeLoan(Economy& economy, float amount);
-    void repayLoan(Economy& economy, int loanIndex);
-    bool audit(Government& government);
-    void update();
-};
-
-
-enum EventType { FAMINE, DISEASE, WAR, NATURAL_DISASTER };
-
-class Event {
-private:
-    EventType type;
-    int severity;
-    int duration;
-    int currentDuration;
-    bool isActive;
-public:
-    Event();
-    ~Event();
-
-    void setType(EventType type);
-    void setSeverity(int level);
-    void setDuration(int turns);
-    void setActive(bool active);
-
-    EventType getType() const;
-    int getSeverity() const;
-    int getDuration() const;
-    int getCurrentDuration() const;
-    bool getIsActive() const;
-
-    void trigger();
-    void resolve();
-    void update();
-    void applyEffects(Kingdom& kingdom);
-    const char* getEventName() const;
-};
-
-template <typename T>
-class Logger {
-private:
-    char filename[50];
-    T* data;
-    int capacity;
-    int count;
-public:
-    Logger(const char* filename, int capacity = 100) {
-        strcpy(this->filename, filename);
-        this->capacity = capacity;
-        this->data = new T[capacity];
-        this->count = 0;
-    }
-
-    ~Logger() {
-        delete[] data;
-    }
-
-    void log(T value) {
-        if (count < capacity) {
-            data[count++] = value;
-        }
-    }
-
-    void saveToFile() {
-        std::ofstream file(filename);
-        if (file.is_open()) {
-            for (int i = 0; i < count; i++) {
-                file << data[i] << std::endl;
-            }
-            file.close();
-        }
-        else {
-            throw StrongholdException("Could not open file for logging");
-        }
-    }
-
-    T* getData() const {
-        return data;
-    }
-
-    int getCount() const {
-        return count;
-    }
+    void saveToFile(ofstream& outFile);
+    void loadFromFile(ifstream& inFile);
 };
 
 class Kingdom {
 private:
-    char name[50];
-    Population* population;
-    Military* military;
-    Economy* economy;
-    Government* government;
-    Bank* bank;
-    Resource* resources;
-    int resourceCount;
-    Event* currentEvent;
-    int turn;
-    Logger<float>* treasuryLogger;
+    char name[MAX_NAME_LENGTH];
+    int population;
+    int happiness;
+    Resource resources;
+    Military military;
+    Technology tech;
+    Building buildings[10];
+    int buildingCounter;
+    int x, y; // Position on map
 
 public:
-    Kingdom(const char* name);
-    ~Kingdom();
+    Kingdom();
+    Kingdom(const char* kingdomName);
 
-    Population& getPopulation();
+    const char* getName() const;
+    int getPopulation() const;
+    int getHappiness() const;
+
+    int getGold() const;
+    int getFood() const;
+    int getWood() const;
+    int getStone() const;
+
+    void addGold(int amount);
+    void addFood(int amount);
+    void addWood(int amount);
+    void addStone(int amount);
+
+    bool spendGold(int amount);
+    bool spendFood(int amount);
+    bool spendWood(int amount);
+    bool spendStone(int amount);
+
+    void setPosition(int newX, int newY);
+    int getX() const;
+    int getY() const;
+
     Military& getMilitary();
-    Economy& getEconomy();
-    Government& getGovernment();
-    Bank& getBank();
-    Resource* getResources();
-    int getResourceCount() const;
-    Event* getCurrentEvent();
-    int getTurn() const;
 
-    void addResource(const char* name, int amount, int productionRate, int consumptionRate, float price);
-    Resource* findResource(const char* name);
-    void nextTurn();
-    void generateRandomEvent();
-    bool checkGameOver() const;
-    void saveGame(const char* filename);
-    bool loadGame(const char* filename);
+    void processTurn();
+    void collectTaxes();
+    void buildStructure();
+    void recruitUnits();
+    void trainTroops();
+    void managePopulation();
+    void researchTechnology();
+    void fortify();
+
+    void recruitSoldiers(int count);
+
     void displayStatus() const;
+    void displayMilitary() const;
+
+    void spyOn(Kingdom* target);
+
+    void saveToFile(ofstream& outFile);
+    void loadFromFile(ifstream& inFile);
 };
 
-#endif
+class Map {
+private:
+    int width;
+    int height;
+    int grid[MAP_SIZE][MAP_SIZE]; // 0 for empty, >0 for kingdom index+1
+    int territoryControl[MAX_KINGDOMS][MAP_SIZE][MAP_SIZE]; // Territory control strength per kingdom
+
+public:
+    Map();
+    Map(int w, int h);
+
+    bool isOccupied(int x, int y) const;
+    void placeKingdom(Kingdom* kingdom, int x, int y);
+    bool moveKingdom(Kingdom* kingdom);
+    void expandTerritory(Kingdom* kingdom);
+
+    void map_display() const;
+    void displayTerritory(Kingdom* kingdom) const;
+
+    void launchAttack(Kingdom* attacker, Kingdom* defender);
+
+    void saveToFile(ofstream& outFile);
+    void loadFromFile(ifstream& inFile);
+};
+
+class DiplomacyManager {
+private:
+    Treaty treaties[MAX_TREATIES];
+    int treatyCount;
+    RelationshipStatus relations[MAX_KINGDOMS][MAX_KINGDOMS];
+
+public:
+    DiplomacyManager();
+
+    bool hasTreaty(Kingdom* k1, Kingdom* k2) const;
+    bool proposeTreaty(Kingdom* proposer, Kingdom* receiver);
+    bool breakTreaty(Kingdom* kingdom);
+    bool breakTreaty(Kingdom* k1, Kingdom* k2);
+
+    void viewTreaties(Kingdom* kingdom) const;
+    void checkRelations(Kingdom* kingdom) const;
+
+    void declareWar(Kingdom* declarer, Kingdom* target);
+    RelationshipStatus getRelationship(Kingdom* k1, Kingdom* k2) const;
+
+    void updateRelations(Kingdom* k1, Kingdom* k2, int change);
+
+    void saveToFile(ofstream& outFile);
+    void loadFromFile(ifstream& inFile);
+};
+
+class Market {
+private:
+    int prices[4]; // Prices for gold, food, wood, stone
+    offer tradeOffers[MAX_TRADE_OFFERS];
+    int offerCount;
+
+public:
+    Market();
+
+    void displayPrices() const;
+    void updatePrices();
+
+    void buyResources(Kingdom* kingdom);
+    void sellResources(Kingdom* kingdom);
+
+    bool proposeTrade(Kingdom* offerer, Kingdom* receiver);
+    void viewTradeOffers(Kingdom* kingdom) const;
+    bool respondToOffer(Kingdom* kingdom, int offerIndex, bool accept);
+
+    void initiateSmuggling(Kingdom* kingdom);
+
+    void saveToFile(ofstream& outFile);
+    void loadFromFile(ifstream& inFile);
+};
+
+class CommunicationSystem {
+private:
+    Message messages[MAX_MESSAGES];
+    int messageCount;
+
+public:
+    CommunicationSystem();
+
+    void sendMessage(const char* sender, const char* receiver, const char* content);
+    void showMessages(const char* kingdomName);
+    void sendNewMessage(Kingdom* sender);
+
+    void saveToFile(ofstream& outFile);
+    void loadFromFile(ifstream& inFile);
+};
+
+#endif // STRONGHOLD_H

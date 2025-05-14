@@ -1,497 +1,482 @@
 #include "Stronghold.h"
-#include <iostream>
-#include <cstring>
-#include <cstdlib>
-#include <ctime>
-using namespace std;
-void displayMenu() {
-    cout << "\n STRONGHOLD KINGDOM SIMULATOR \n";
-    cout << "1. Next Turn\n";
-    cout << "2. Show Kingdom Status\n";
-    cout << "3. Manage Resources\n";
-    cout << "4. Manage Population\n";
-    cout << "5. Manage Military\n";
-    cout << "6. Manage Economy\n";
-    cout << "7. Manage Government\n";
-    cout << "8. Manage Bank\n";
-    cout << "9. Save Game\n";
-    cout << "10. Load Game\n";
-    cout << "0. Quit\n";
-    cout << "Enter your choice: ";
-}
+#include <limits>
 
-void manageResources(Kingdom& kingdom) {
-    while (true) {
-        cout << "\n=== RESOURCE MANAGEMENT ===\n";
-        cout << "Resources:\n";
-        for (int i = 0; i < kingdom.getResourceCount(); i++) {
-            cout << i + 1 << ". " << kingdom.getResources()[i].getName()
-                << ": " << kingdom.getResources()[i].getAmount()
-                << " (+" << kingdom.getResources()[i].getProductionRate()
-                << ", -" << kingdom.getResources()[i].getConsumptionRate() << ")\n";
-        }
+// Global variables
+Kingdom* kingdoms[MAX_KINGDOMS];
+int kingdomCount = 0;
+Map* gameMap;
+Market* market;
+DiplomacyManager* diplomacy;
+CommunicationSystem* comms;
 
-        cout << "\n1. Adjust Production Rate\n";
-        cout << "2. Adjust Consumption Rate\n";
-        cout << "3. Return to Main Menu\n";
-        cout << "Enter your choice: ";
-
-        int choice;
-        cin >> choice;
-
-        if (choice == 3) break;
-
-        if (choice == 1 || choice == 2) {
-            cout << "Select resource (1-" << kingdom.getResourceCount() << "): ";
-            int resourceIndex;
-            cin >> resourceIndex;
-
-            if (resourceIndex < 1 || resourceIndex > kingdom.getResourceCount()) {
-                cout << "Invalid resource selection.\n";
-                continue;
-            }
-
-            resourceIndex--;
-
-            if (choice == 1) {
-                cout << "Enter new production rate: ";
-                int newRate;
-                cin >> newRate;
-
-                try {
-                    kingdom.getResources()[resourceIndex].setProductionRate(newRate);
-                    cout << "Production rate updated.\n";
-                }
-                catch (StrongholdException& e) {
-                    cout << "Error: " << e.getMessage() << endl;
-                }
-            }
-            else {
-                cout << "Enter new consumption rate: ";
-                int newRate;
-                cin >> newRate;
-
-                try {
-                    kingdom.getResources()[resourceIndex].setConsumptionRate(newRate);
-                    cout << "Consumption rate updated.\n";
-                }
-                catch (StrongholdException& e) {
-                    cout << "Error: " << e.getMessage() << endl;
-                }
-            }
-        }
-    }
-}
-
-void managePopulation(Kingdom& kingdom) {
-    while (true) {
-        cout << "\n POPULATION MANAGEMENT \n";
-        cout << "Total Population: " << kingdom.getPopulation().getTotal() << "\n";
-        cout << "Peasants: " << kingdom.getPopulation().getCountByClass(PEASANT) << "\n";
-        cout << "Merchants: " << kingdom.getPopulation().getCountByClass(MERCHANT) << "\n";
-        cout << "Nobles: " << kingdom.getPopulation().getCountByClass(NOBLE) << "\n";
-        cout << "Clergy: " << kingdom.getPopulation().getCountByClass(CLERGY) << "\n";
-        cout << "Military: " << kingdom.getPopulation().getCountByClass(MILITARY) << "\n";
-        cout << "Happiness: " << kingdom.getPopulation().getHappinessLevel() << "%\n";
-        cout << "Health: " << kingdom.getPopulation().getHealthLevel() << "%\n";
-
-        cout << "\n1. Add Person\n";
-        cout << "2. Return to Main Menu\n";
-        cout << "Enter your choice: ";
-
-        int choice;
-        cin >> choice;
-
-        if (choice == 2) break;
-
-        if (choice == 1) {
-            cout << "Select social class:\n";
-            cout << "1. Peasant\n";
-            cout << "2. Merchant\n";
-            cout << "3. Noble\n";
-            cout << "4. Clergy\n";
-            cout << "Enter choice: ";
-
-            int classChoice;
-            cin >> classChoice;
-
-            SocialClass socialClass;
-            switch (classChoice) {
-            case 1: socialClass = PEASANT; break;
-            case 2: socialClass = MERCHANT; break;
-            case 3: socialClass = NOBLE; break;
-            case 4: socialClass = CLERGY; break;
-            default:
-                cout << "Invalid choice. Defaulting to Peasant.\n";
-                socialClass = PEASANT;
-            }
-
-            try {
-                kingdom.getPopulation().addPerson(socialClass);
-                cout << "Person added.\n";
-            }
-            catch (StrongholdException& e) {
-                cout << "Error: " << e.getMessage() << endl;
-            }
-        }
-    }
-}
-
-void manageMilitary(Kingdom& kingdom) {
-    while (true) {
-        cout << "\n=== MILITARY MANAGEMENT ===\n";
-        cout << "Soldiers: " << kingdom.getMilitary().getSoldiers() << "\n";
-        cout << "Training: " << kingdom.getMilitary().getTraining() << "%\n";
-        cout << "Morale: " << kingdom.getMilitary().getMorale() << "%\n";
-        cout << "Paid Status: " << (kingdom.getMilitary().getIsPaid() ? "Paid" : "Unpaid") << "\n";
-        cout << "Military Strength: " << kingdom.getMilitary().getStrength() << "\n";
-
-        cout << "\n1. Recruit Soldiers\n";
-        cout << "2. Pay Military\n";
-        cout << "3. Feed Military\n";
-        cout << "4. Battle Simulation\n";
-        cout << "5. Return to Main Menu\n";
-        cout << "Enter your choice: ";
-
-        int choice;
-        cin >> choice;
-
-        if (choice == 5) break;
-
-        switch (choice) {
-        case 1: {
-            cout << "How many soldiers to recruit? ";
-            int count;
-            cin >> count;
-
-            try {
-                kingdom.getMilitary().recruit(kingdom.getPopulation(), count);
-                cout << "Recruitment complete.\n";
-            }
-            catch (StrongholdException& e) {
-                cout << "Error: " << e.getMessage() << endl;
-            }
-            break;
-        }
-        case 2: {
-            kingdom.getMilitary().pay(kingdom.getEconomy());
-            cout << "Military payment processed.\n";
-            break;
-        }
-        case 3: {
-            Resource* food = kingdom.findResource("Food");
-            if (food) {
-                kingdom.getMilitary().feed(*food);
-                cout << "Military fed.\n";
-            }
-            else {
-                cout << "Error: Food resource not found.\n";
-            }
-            break;
-        }
-        case 4: {
-            cout << "Enter enemy strength: ";
-            int enemyStrength;
-            cin >> enemyStrength;
-
-            bool victory = kingdom.getMilitary().battle(enemyStrength);
-            if (victory) {
-                cout << "Victory! Your military prevailed.\n";
-            }
-            else {
-                cout << "Defeat! Your military was defeated.\n";
-            }
-            break;
-        }
-        }
-    }
-}
-
-void manageEconomy(Kingdom& kingdom) {
-    while (true) {
-        cout << "\n=== ECONOMY MANAGEMENT ===\n";
-        cout << "Treasury: " << kingdom.getEconomy().getTreasury() << " gold\n";
-        cout << "Tax Rate: " << (kingdom.getEconomy().getTaxRate() * 100) << "%\n";
-        cout << "Inflation Rate: " << (kingdom.getEconomy().getInflationRate() * 100) << "%\n";
-
-        cout << "\n1. Set Tax Rate\n";
-        cout << "2. Collect Taxes\n";
-        cout << "3. Make Expense\n";
-        cout << "4. Return to Main Menu\n";
-        cout << "Enter your choice: ";
-
-        int choice;
-        cin >> choice;
-
-        if (choice == 4) break;
-
-        switch (choice) {
-        case 1: {
-            cout << "Enter new tax rate (0-100%): ";
-            float rate;
-            cin >> rate;
-
-            try {
-                kingdom.getEconomy().setTaxRate(rate / 100.0f);
-                cout << "Tax rate updated.\n";
-            }
-            catch (StrongholdException& e) {
-                cout << "Error: " << e.getMessage() << endl;
-            }
-            break;
-        }
-        case 2: {
-            kingdom.getEconomy().collectTaxes(kingdom.getPopulation());
-            cout << "Taxes collected.\n";
-            break;
-        }
-        case 3: {
-            cout << "Enter expense amount: ";
-            float amount;
-            cin >> amount;
-
-            try {
-                bool success = kingdom.getEconomy().payExpense(amount);
-                if (success) {
-                    cout << "Expense paid.\n";
-                }
-                else {
-                    cout << "Insufficient funds.\n";
-                }
-            }
-            catch (StrongholdException& e) {
-                cout << "Error: " << e.getMessage() << endl;
-            }
-            break;
-        }
-        }
-    }
-}
-
-void manageGovernment(Kingdom& kingdom) {
-    while (true) {
-        cout << "\n GOVERNMENT MANAGEMENT \n";
-        cout << "Leadership Type: ";
-        switch (kingdom.getGovernment().getLeadershipType()) {
-        case MONARCHY:  cout << "Monarchy"; break;
-        case DEMOCRACY:  cout << "Democracy"; break;
-        case DICTATORSHIP:  cout << "Dictatorship"; break;
-        case OLIGARCHY:  cout << "Oligarchy"; break;
-        }
-        cout << endl;
-        cout << "Leader: " << kingdom.getGovernment().getLeaderName() << "\n";
-        cout << "Competence: " << kingdom.getGovernment().getLeaderCompetence() << "%\n";
-        cout << "Corruption: " << kingdom.getGovernment().getLeaderCorruption() << "%\n";
-        cout << "Term Remaining: " << kingdom.getGovernment().getTermYears() << " years\n";
-
-        cout << "\n1. Change Leadership Type\n";
-        cout << "2. Set Leader Name\n";
-        cout << "3. Hold Election (Democracy Only)\n";
-        cout << "4. Return to Main Menu\n";
-        cout << "Enter your choice: ";
-
-        int choice;
-        cin >> choice;
-
-        if (choice == 4) break;
-
-        switch (choice) {
-        case 1: {
-            cout << "Select leadership type:\n";
-            cout << "1. Monarchy\n";
-            cout << "2. Democracy\n";
-            cout << "3. Dictatorship\n";
-            cout << "4. Oligarchy\n";
-            cout << "Enter choice: ";
-
-            int typeChoice;
-            cin >> typeChoice;
-
-            LeadershipType type;
-            switch (typeChoice) {
-            case 1: type = MONARCHY; break;
-            case 2: type = DEMOCRACY; break;
-            case 3: type = DICTATORSHIP; break;
-            case 4: type = OLIGARCHY; break;
-            default:
-                cout << "Invalid choice. No changes made.\n";
-                continue;
-            }
-
-            kingdom.getGovernment().setLeadershipType(type);
-            cout << "Leadership type changed.\n";
-            break;
-        }
-        case 2: {
-            cout << "Enter leader name: ";
-            char name[50];
-            cin.ignore();
-            cin.getline(name, 50);
-
-            kingdom.getGovernment().setLeaderName(name);
-            cout << "Leader name updated.\n";
-            break;
-        }
-        case 3: {
-            if (kingdom.getGovernment().getLeadershipType() == DEMOCRACY) {
-                kingdom.getGovernment().holdElection(kingdom.getPopulation());
-                cout << "Election held. New leader elected.\n";
-            }
-            else {
-                cout << "Elections can only be held in a Democracy.\n";
-            }
-            break;
-        }
-        }
-    }
-}
-
-void manageBank(Kingdom& kingdom) {
-    while (true) {
-        cout << "\n=== BANK MANAGEMENT ===\n";
-        cout << "Reserves: " << kingdom.getBank().getReserves() << " gold\n";
-        cout << "Interest Rate: " << (kingdom.getBank().getInterestRate() * 100) << "%\n";
-        cout << "Corruption Status: " << (kingdom.getBank().getIsCorrupt() ? "Corrupt" : "Clean") << "\n";
-
-        cout << "\n1. Take Loan\n";
-        cout << "2. Audit Bank\n";
-        cout << "3. Return to Main Menu\n";
-        cout << "Enter your choice: ";
-
-        int choice;
-        cin >> choice;
-
-        if (choice == 3) break;
-
-        switch (choice) {
-        case 1: {
-            cout << "Enter loan amount: ";
-            float amount;
-            cin >> amount;
-
-            try {
-                bool success = kingdom.getBank().takeLoan(kingdom.getEconomy(), amount);
-                if (success) {
-                    cout << "Loan approved and deposited in treasury.\n";
-                }
-                else {
-                    cout << "Loan denied. Insufficient bank reserves.\n";
-                }
-            }
-            catch (StrongholdException& e) {
-                cout << "Error: " << e.getMessage() << endl;
-            }
-            break;
-        }
-        case 2: {
-            bool corruption = kingdom.getBank().audit(kingdom.getGovernment());
-            if (corruption) {
-                cout << "Audit complete. Corruption detected in government!\n";
-            }
-            else {
-                cout << "Audit complete. No corruption detected.\n";
-            }
-            break;
-        }
-        }
-    }
-}
+// Function prototypes
+void initializeGame();
+void gameLoop();
+void saveGameState();
+void loadGameState();
+void displayKingdomMenu(Kingdom* kingdom);
+void handleKingdomAction(Kingdom* kingdom);
+void handleDiplomacyAction(Kingdom* kingdom);
+void handleTradeAction(Kingdom* kingdom);
+void handleWarAction(Kingdom* kingdom);
+void handleMapAction(Kingdom* kingdom);
+void simulateOtherKingdoms();
+Kingdom* selectTargetKingdom(Kingdom* currentKingdom);
+void clearScreen();
+void waitForEnter();
 
 int main() {
+    srand(static_cast<unsigned int>(time(nullptr)));
 
-    srand(time(NULL));
+    cout << "===============================" << endl;
+    cout << "      STRONGHOLD GAME          " << endl;
+    cout << "===============================" << endl;
 
-    cout << "STRONGHOLD KINGDOM SIMULATOR \n";
-    cout << "Enter kingdom name: ";
-    char kingdomName[50];
-    cin.getline(kingdomName, 50);
+    bool newGame = true;
+    char choice;
+    cout << "Do you want to load a saved game? (y/n): ";
+    cin >> choice;
 
-    Kingdom kingdom(kingdomName);
-    cout << "Kingdom of " << kingdomName << " established!\n";
-
-    bool running = true;
-    while (running) {
-
-        if (kingdom.checkGameOver()) {
-            cout << "\n** GAME OVER **\n";
-            cout << "Your kingdom has fallen into ruin.\n";
-            break;
-        }
-
-        Event* currentEvent = kingdom.getCurrentEvent();
-        if (currentEvent->getIsActive()) {
-            cout << "\n!!! " << currentEvent->getEventName() << " is affecting your kingdom !!!\n";
-        }
-
-        displayMenu();
-
-        int choice;
-        cin >> choice;
-
-        switch (choice) {
-        case 0:
-            running = false;
-            break;
-        case 1:
-            kingdom.nextTurn();
-            cout << "Turn " << kingdom.getTurn() << " completed.\n";
-            break;
-        case 2:
-            kingdom.displayStatus();
-            break;
-        case 3:
-            manageResources(kingdom);
-            break;
-        case 4:
-            managePopulation(kingdom);
-            break;
-        case 5:
-            manageMilitary(kingdom);
-            break;
-        case 6:
-            manageEconomy(kingdom);
-            break;
-        case 7:
-            manageGovernment(kingdom);
-            break;
-        case 8:
-            manageBank(kingdom);
-            break;
-        case 9: {
-            cout << "Enter save filename: ";
-            char filename[100];
-            cin.ignore();
-            cin.getline(filename, 100);
-
-            try {
-                kingdom.saveGame(filename);
-                cout << "Game saved successfully.\n";
-            }
-            catch (StrongholdException& e) {
-                cout << "Error saving game: " << e.getMessage() << endl;
-            }
-            break;
-        }
-        case 10: {
-            cout << "Enter load filename: ";
-            char filename[100];
-            cin.ignore();
-            cin.getline(filename, 100);
-
-            bool success = kingdom.loadGame(filename);
-            if (success) {
-                cout << "Game loaded successfully.\n";
-            }
-            else {
-                cout << "Error loading game.\n";
-            }
-            break;
-        }
-        default:
-            cout << "Invalid choice. Please try again.\n";
-        }
+    if (choice == 'y' || choice == 'Y') {
+        loadGameState();
+        newGame = false;
     }
 
-    cout << "Thank you for playing Stronghold Kingdom Simulator!\n";
+    if (newGame) {
+        initializeGame();
+    }
+
+    gameLoop();
+
+    // Clean up
+    for (int i = 0; i < kingdomCount; i++) {
+        delete kingdoms[i];
+    }
+    delete gameMap;
+    delete market;
+    delete diplomacy;
+    delete comms;
+
     return 0;
+}
+
+void initializeGame() {
+    gameMap = new Map(MAP_SIZE, MAP_SIZE);
+    market = new Market();
+    diplomacy = new DiplomacyManager();
+    comms = new CommunicationSystem();
+
+    cout << "Enter a name for your kingdom: ";
+    char kingdomName[MAX_NAME_LENGTH];
+    cin.ignore();
+    cin.getline(kingdomName, MAX_NAME_LENGTH);
+
+    kingdoms[0] = new Kingdom(kingdomName);
+    kingdomCount++;
+
+    int x = rand() % MAP_SIZE;
+    int y = rand() % MAP_SIZE;
+    gameMap->placeKingdom(kingdoms[0], x, y);
+
+    const char* aiNames[] = { "Northland", "Westeros", "Eastfall", "Southreach" };
+    for (int i = 0; i < 4; i++) {
+        kingdoms[kingdomCount] = new Kingdom(aiNames[i]);
+        kingdoms[kingdomCount]->addGold(500 + rand() % 500);
+        kingdoms[kingdomCount]->addFood(300 + rand() % 300);
+        kingdoms[kingdomCount]->addWood(400 + rand() % 200);
+        kingdoms[kingdomCount]->addStone(200 + rand() % 200);
+        kingdoms[kingdomCount]->recruitSoldiers(50 + rand() % 50);
+
+        bool validPosition = false;
+        int kx, ky;
+        while (!validPosition) {
+            kx = rand() % MAP_SIZE;
+            ky = rand() % MAP_SIZE;
+            if (!gameMap->isOccupied(kx, ky)) {
+                validPosition = true;
+            }
+        }
+        gameMap->placeKingdom(kingdoms[kingdomCount], kx, ky);
+        kingdomCount++;
+    }
+
+    cout << "Game initialized with " << kingdomCount << " kingdoms!" << endl;
+    waitForEnter();
+}
+
+void gameLoop() {
+    bool gameRunning = true;
+    int turn = 1;
+
+    while (gameRunning) {
+        clearScreen();
+        cout << "======= TURN " << turn << " =======" << endl;
+
+        Kingdom* playerKingdom = kingdoms[0];
+        displayKingdomMenu(playerKingdom);
+
+        simulateOtherKingdoms();
+
+        for (int i = 0; i < kingdomCount; i++) {
+            kingdoms[i]->processTurn();
+        }
+
+        if (playerKingdom->getPopulation() <= 0) {
+            cout << "Your kingdom has fallen! Game over!" << endl;
+            gameRunning = false;
+        }
+
+        turn++;
+        saveGameState();
+    }
+}
+
+void displayKingdomMenu(Kingdom* kingdom) {
+    bool backToMain = false;
+    while (!backToMain) {
+        clearScreen();
+        cout << "====== " << kingdom->getName() << " ======" << endl;
+        kingdom->displayStatus();
+
+        cout << endl << "Options:" << endl;
+        cout << "1. Internal Kingdom Management" << endl;
+        cout << "2. Diplomacy and Treaties" << endl;
+        cout << "3. Trade and Market" << endl;
+        cout << "4. Military and Warfare" << endl;
+        cout << "5. View Map" << endl;
+        cout << "6. Messages and Communication" << endl;
+        cout << "7. End Turn" << endl;
+        cout << "8. Save and Exit" << endl;
+
+        int choice;
+        cout << "Enter your choice: ";
+        cin >> choice;
+        if (cin.fail()) {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input." << endl;
+            waitForEnter();
+            continue;
+        }
+
+        switch (choice) {
+        case 1: handleKingdomAction(kingdom); break;
+        case 2: handleDiplomacyAction(kingdom); break;
+        case 3: handleTradeAction(kingdom); break;
+        case 4: handleWarAction(kingdom); break;
+        case 5: handleMapAction(kingdom); break;
+        case 6:
+            comms->showMessages(kingdom->getName());
+            comms->sendNewMessage(kingdom);
+            waitForEnter();
+            break;
+        case 7: backToMain = true; break;
+        case 8: saveGameState(); exit(0);
+        default: cout << "Invalid option." << endl; waitForEnter();
+        }
+    }
+}
+
+void handleKingdomAction(Kingdom* kingdom) {
+    clearScreen();
+    cout << "===== Kingdom Management =====" << endl;
+    cout << "1. Build Structure" << endl;
+    cout << "2. Recruit Units" << endl;
+    cout << "3. Collect Taxes" << endl;
+    cout << "4. Research Technology" << endl;
+    cout << "5. Manage Population" << endl;
+    cout << "6. Back" << endl;
+
+    int subchoice;
+    cout << "Enter your choice: ";
+    cin >> subchoice;
+    if (cin.fail()) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid input." << endl;
+        waitForEnter();
+        return;
+    }
+
+    switch (subchoice) {
+    case 1: kingdom->buildStructure(); break;
+    case 2: kingdom->recruitUnits(); break;
+    case 3: kingdom->collectTaxes(); break;
+    case 4: kingdom->researchTechnology(); break;
+    case 5: kingdom->managePopulation(); break;
+    case 6: return;
+    default: cout << "Invalid option." << endl;
+    }
+    waitForEnter();
+}
+
+void handleDiplomacyAction(Kingdom* kingdom) {
+    clearScreen();
+    cout << "===== Diplomacy and Treaties =====" << endl;
+    cout << "1. View Current Treaties" << endl;
+    cout << "2. Propose New Treaty" << endl;
+    cout << "3. Break Existing Treaty" << endl;
+    cout << "4. Check Relations" << endl;
+    cout << "5. Back" << endl;
+
+    int subchoice;
+    cout << "Enter your choice: ";
+    cin >> subchoice;
+    if (cin.fail()) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid input." << endl;
+        waitForEnter();
+        return;
+    }
+
+    switch (subchoice) {
+    case 1: diplomacy->viewTreaties(kingdom); break;
+    case 2: {
+        Kingdom* target = selectTargetKingdom(kingdom);
+        if (target) diplomacy->proposeTreaty(kingdom, target);
+        break;
+    }
+    case 3: diplomacy->breakTreaty(kingdom); break;
+    case 4: diplomacy->checkRelations(kingdom); break;
+    case 5: return;
+    default: cout << "Invalid option." << endl;
+    }
+    waitForEnter();
+}
+
+void handleTradeAction(Kingdom* kingdom) {
+    clearScreen();
+    cout << "===== Trade and Market =====" << endl;
+    cout << "1. View Market Prices" << endl;
+    cout << "2. Buy Resources" << endl;
+    cout << "3. Sell Resources" << endl;
+    cout << "4. Propose Trade Deal" << endl;
+    cout << "5. View Trade Offers" << endl;
+    cout << "6. Smuggling Operations" << endl;
+    cout << "7. Back" << endl;
+
+    int subchoice;
+    cout << "Enter your choice: ";
+    cin >> subchoice;
+    if (cin.fail()) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid input." << endl;
+        waitForEnter();
+        return;
+    }
+
+    switch (subchoice) {
+    case 1: market->displayPrices(); break;
+    case 2: market->buyResources(kingdom); break;
+    case 3: market->sellResources(kingdom); break;
+    case 4: {
+        Kingdom* target = selectTargetKingdom(kingdom);
+        if (target) market->proposeTrade(kingdom, target);
+        break;
+    }
+    case 5: market->viewTradeOffers(kingdom); break;
+    case 6: market->initiateSmuggling(kingdom); break;
+    case 7: return;
+    default: cout << "Invalid option." << endl;
+    }
+    waitForEnter();
+}
+
+void handleWarAction(Kingdom* kingdom) {
+    clearScreen();
+    cout << "===== Military and Warfare =====" << endl;
+    cout << "1. View Military Status" << endl;
+    cout << "2. Train Troops" << endl;
+    cout << "3. Declare War" << endl;
+    cout << "4. Launch Attack" << endl;
+    cout << "5. Fortify Position" << endl;
+    cout << "6. Spy on Kingdom" << endl;
+    cout << "7. Back" << endl;
+
+    int subchoice;
+    cout << "Enter your choice: ";
+    cin >> subchoice;
+    if (cin.fail()) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid input." << endl;
+        waitForEnter();
+        return;
+    }
+
+    switch (subchoice) {
+    case 1: kingdom->displayMilitary(); break;
+    case 2: kingdom->trainTroops(); break;
+    case 3: {
+        Kingdom* target = selectTargetKingdom(kingdom);
+        if (target) diplomacy->declareWar(kingdom, target);
+        break;
+    }
+    case 4: {
+        Kingdom* target = selectTargetKingdom(kingdom);
+        if (target) gameMap->launchAttack(kingdom, target);
+        break;
+    }
+    case 5: kingdom->fortify(); break;
+    case 6: {
+        Kingdom* target = selectTargetKingdom(kingdom);
+        if (target) kingdom->spyOn(target);
+        break;
+    }
+    case 7: return;
+    default: cout << "Invalid option." << endl;
+    }
+    waitForEnter();
+}
+
+void handleMapAction(Kingdom* kingdom) {
+    clearScreen();
+    cout << "===== Map View =====" << endl;
+    cout << "1. View World Map" << endl;
+    cout << "2. View Territory Details" << endl;
+    cout << "3. Move Kingdom" << endl;
+    cout << "4. Expand Territory" << endl;
+    cout << "5. Back" << endl;
+
+    int subchoice;
+    cout << "Enter your choice: ";
+    cin >> subchoice;
+    if (cin.fail()) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "Invalid input." << endl;
+        waitForEnter();
+        return;
+    }
+
+    switch (subchoice) {
+    case 1: gameMap->map_display(); break;
+    case 2: gameMap->displayTerritory(kingdom); break;
+    case 3: gameMap->moveKingdom(kingdom); break;
+    case 4: gameMap->expandTerritory(kingdom); break;
+    case 5: return;
+    default: cout << "Invalid option." << endl;
+    }
+    waitForEnter();
+}
+
+void simulateOtherKingdoms() {
+    for (int i = 1; i < kingdomCount; i++) {
+        Kingdom* aiKingdom = kingdoms[i];
+        int action = rand() % 5;
+        switch (action) {
+        case 0: aiKingdom->collectTaxes(); break;
+        case 1: aiKingdom->buildStructure(); break;
+        case 2: aiKingdom->recruitUnits(); break;
+        case 3: aiKingdom->trainTroops(); break;
+        case 4: aiKingdom->managePopulation(); break;
+        }
+        if (rand() % 10 < 3) {
+            int targetIndex = rand() % kingdomCount;
+            if (targetIndex != i) {
+                diplomacy->proposeTreaty(aiKingdom, kingdoms[targetIndex]);
+            }
+        }
+    }
+    cout << endl << "AI kingdoms have taken their turns." << endl;
+}
+
+Kingdom* selectTargetKingdom(Kingdom* currentKingdom) {
+    clearScreen();
+    cout << "Select target kingdom:" << endl;
+    int validCount = 0;
+    for (int i = 0; i < kingdomCount; i++) {
+        if (kingdoms[i] != currentKingdom) {
+            cout << validCount + 1 << ". " << kingdoms[i]->getName() << endl;
+            validCount++;
+        }
+    }
+    cout << validCount + 1 << ". Cancel" << endl;
+    int choice;
+    cout << "Enter your choice: ";
+    cin >> choice;
+    if (cin.fail() || choice <= 0 || choice > validCount + 1) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        return nullptr;
+    }
+    if (choice == validCount + 1) return nullptr;
+    int index = 0, counter = 0;
+    for (int i = 0; i < kingdomCount; i++) {
+        if (kingdoms[i] != currentKingdom) {
+            counter++;
+            if (counter == choice) {
+                index = i;
+                break;
+            }
+        }
+    }
+    return kingdoms[index];
+}
+
+void saveGameState() {
+    ofstream outFile("savegame.dat", ios::binary);
+    if (!outFile) {
+        cout << "Error saving game." << endl;
+        return;
+    }
+    outFile.write((char*)&kingdomCount, sizeof(kingdomCount));
+    for (int i = 0; i < kingdomCount; i++) {
+        kingdoms[i]->saveToFile(outFile);
+    }
+    gameMap->saveToFile(outFile);
+    diplomacy->saveToFile(outFile);
+    market->saveToFile(outFile);
+    comms->saveToFile(outFile);
+    outFile.close();
+    cout << "Game saved successfully!" << endl;
+}
+
+void loadGameState() {
+    ifstream inFile("savegame.dat", ios::binary);
+    if (!inFile) {
+        cout << "No saved game found." << endl;
+        initializeGame();
+        return;
+    }
+    for (int i = 0; i < kingdomCount; i++) {
+        delete kingdoms[i];
+        kingdoms[i] = nullptr;
+    }
+    delete gameMap;
+    delete market;
+    delete diplomacy;
+    delete comms;
+
+    inFile.read((char*)&kingdomCount, sizeof(kingdomCount));
+    for (int i = 0; i < kingdomCount; i++) {
+        kingdoms[i] = new Kingdom();
+        kingdoms[i]->loadFromFile(inFile);
+    }
+    gameMap = new Map();
+    gameMap->loadFromFile(inFile);
+    diplomacy = new DiplomacyManager();
+    diplomacy->loadFromFile(inFile);
+    market = new Market();
+    market->loadFromFile(inFile);
+    comms = new CommunicationSystem();
+    comms->loadFromFile(inFile);
+    inFile.close();
+    cout << "Game loaded successfully!" << endl;
+}
+
+void clearScreen() {
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
+void waitForEnter() {
+    cout << endl << "Press Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
 }
